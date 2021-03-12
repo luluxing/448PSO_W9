@@ -193,6 +193,7 @@ ANALYZE TABLE tt;
 ```
 
 If we execute EXPLAIN AGAIN:
+table|type|possible_keys|key|key_len|ref|rows|Extra
 -|-|-|-|-|-|-|-
 et|eq_ref|PRIMARY|PRIMARY|15|tt.ActualPC |1
 do|eq_ref|PRIMARY|PRIMARY|15|tt.ClientID|1
