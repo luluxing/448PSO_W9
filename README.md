@@ -192,10 +192,8 @@ Executing the EXPLAIN statement again produces this result:
 table|type|possible_keys|key|key_len|ref|rows|Extra
 -|-|-|-|-|-|-|-
 et|eq_ref|PRIMARY|PRIMARY|15|tt.ActualPC|1
-do|ALL|PRIMARY|NULL|NULL|NULL|2135
-Range checked for each record (index map: 0x1)
-et_1|ALL|PRIMARY|NULL|NULL|NULL|74
-Range checked for each record (index map: 0x1)
+do|ALL|PRIMARY, Range checked for each record (index map: 0x1)|NULL|NULL|NULL|2135
+et_1|ALL|PRIMARY, Range checked for each record (index map: 0x1)|NULL|NULL|NULL|74
 tt|ALL|AssignedPC,ClientID,ActualPC |NULL|NULL|NULL|3872|Using where
 
 Much better: The product of the rows values is less by a factor of 74. This version executes in a couple of seconds.
