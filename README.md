@@ -119,7 +119,6 @@ It produces `EXPLAIN` output along with timing and additional, iterator-based, i
 
 Supported in MySQL 8.0.18.
 
-Example from MySQL documentation:
 ```sql
 CREATE TABLE t3 (
     pk INTEGER NOT NULL PRIMARY KEY,
@@ -152,9 +151,9 @@ EXPLAIN SELECT tt.TicketNumber, tt.TimeIn,
           AND tt.AssignedPC = et_1.EMPLOYID
           AND tt.ClientID = do.CUSTNMBR;
 ```
-Suppose the `tt.ActualPC` values are not evenly distributed.
+The `tt.ActualPC` values are not evenly distributed.
 
-Suppose the columns being compared have been declared as:
+The columns being compared have been declared as:
 Table|Column|Data Type
 -|-|-
 tt|ActualPC|CHAR(10)
