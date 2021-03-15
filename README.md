@@ -1,29 +1,12 @@
-# 448PSO Week 9
+# 448PSO Week 9 - Understanding the Query Evaluation Plan
 
-We will use MySQL to show the query evaluation plan
+We can see how a query is executed by `EXPLAIN` plan and whether a query is optimized well.
 
-## The INFORMATION_SCHEMA STATISTICS Table
-https://dev.mysql.com/doc/refman/8.0/en/information-schema-statistics-table.html
+We will use MySQL to show the query evaluation plan.
 
-```sql
-SELECT * FROM INFORMATION_SCHEMA.STATISTICS WHERE table_name = 'University' AND table_schema = 'xingl';
-```
-TABLE_CATALOG | TABLE_SCHEMA | TABLE_NAME | NON_UNIQUE | INDEX_SCHEMA | INDEX_NAME | SEQ_IN_INDEX | COLUMN_NAME | COLLATION | CARDINALITY | SUB_PART | PACKED | NULLABLE | INDEX_TYPE | COMMENT | INDEX_COMMENT 
----------------|--------------|------------|----------|--------------|-----------|-----------|-----------|---------|------------|--------|-------|--------|----------|--------|---------------
-def           | xingl        | University |          0 | xingl        | PRIMARY    |            1 | UnivId      | A         |           3 |     NULL | NULL   |          | BTREE      |         |               
+You can create a MySQL account following this link: https://www.itap.purdue.edu/infrastructure/database/mysql/careeraccount.html . This requires to set a password and please do not use your Purdue career account password for MySQL account.
 
-```sql
-show index from University from xingl;
-```
- Table      | Non_unique | Key_name | Seq_in_index | Column_name | Collation | Cardinality | Sub_part | Packed | Null | Index_type | Comment | Index_comment 
-----------|-----------|---------|-----------|------------|-------|------------|--------|-------|-----|-----------|-------|---------------
- University |          0 | PRIMARY  |            1 | UnivId      | A         |           3 |     NULL | NULL   |      | BTREE      |         |               
-
-
-## `EXPLAIN` statement
-
-We can use `Explain` before `SELECT`, `DELETE`, `INSERT`, `REPLACE`, and `UPDATE`.
-
+Example tables:
 ```sql
 CREATE TABLE University(
         UnivId INTEGER CHECK (UnivId > 0 AND UnivId <= 9999),
@@ -55,6 +38,10 @@ INSERT INTO Employee VALUES (3, 'Lin', 2);
 INSERT INTO Employee VALUES (4, 'Rebecca', 3);
 ```
 
+## `EXPLAIN` statement
+
+We can use `Explain` before `SELECT`, `DELETE`, `INSERT`, `REPLACE`, and `UPDATE`.
+
 If we use:
 ```sql
 explain select * from University, Employee where UnivId=Graduate;
@@ -64,17 +51,57 @@ explain select * from University, Employee where UnivId=Graduate;
   1 | SIMPLE      | University | ALL   | PRIMARY       | NULL | NULL    | NULL |    3 |              
   1 | SIMPLE      | Employee   | ALL   | Graduate      | NULL | NULL    | NULL |    4 | Using where; Using join buffer 
 
+* select_type: Simple SELECT (not using UNION or subqueries)
+* type : The join type. 
+  * ALL: A full table scan is done for each combination of rows from the previous tables. This is normally not good if the table is the first table not marked const, and usually very bad in all other cases. Normally, you can avoid ALL by adding indexes that enable row retrieval from the table based on constant values or column values from earlier tables.
+* possible_keys : The possible_keys column indicates the indexes from which MySQL can choose to find the rows in this table.
+* rows: The rows column indicates the number of rows MySQL believes it must examine to execute the query. For `InnoDB` tables, this number is an estimate, and may not always be exact.
+* Extra
+  * Using where: A WHERE clause is used to restrict which rows to match against the next table or send to the client.
+  * Using join buffer: Tables from earlier joins are read in portions into the join buffer, and then their rows are used from the buffer to perform the join with the current table. 
+
+If we show the index of `University`:
+```sql
+show index from University from xingl;
+```
+ Table      | Non_unique | Key_name | Seq_in_index | Column_name | Collation | Cardinality | Sub_part | Packed | Null | Index_type | Comment | Index_comment 
+----------|-----------|---------|-----------|------------|-------|------------|--------|-------|-----|-----------|-------|---------------
+ University |          0 | PRIMARY  |            1 | UnivId      | A         |           3 |     NULL | NULL   |      | BTREE      |         |               
+
+## The INFORMATION_SCHEMA STATISTICS Table
+`INFORMATION_SCHEMA` provides access to database metadata, information about the MySQL server such as the name of a database or table, the data type of a column, or access privileges. Other terms that are sometimes used for this information are data dictionary and system catalog.
+
+The `STATISTICS` table provides information about table indexes.
+
+```sql
+SELECT * FROM INFORMATION_SCHEMA.STATISTICS WHERE table_name = 'University' AND table_schema = 'xingl';
+```
+TABLE_CATALOG | TABLE_SCHEMA | TABLE_NAME | NON_UNIQUE | INDEX_SCHEMA | INDEX_NAME | SEQ_IN_INDEX | COLUMN_NAME | COLLATION | CARDINALITY | SUB_PART | PACKED | NULLABLE | INDEX_TYPE | COMMENT | INDEX_COMMENT 
+---------------|--------------|------------|----------|--------------|-----------|-----------|-----------|---------|------------|--------|-------|--------|----------|--------|---------------
+def           | xingl        | University |          0 | xingl        | PRIMARY    |            1 | UnivId      | A         |           3 |     NULL | NULL   |          | BTREE      |         |               
+
+* TABLE_CATALOG: The name of the catalog to which the table containing the index belongs. This value is always def.
+* TABLE_SCHEMA: The name of the schema (database) to which the table containing the index belongs.
+* INDEX_NAME: The name of the index. If the index is the primary key, the name is always PRIMARY.
+* SEQ_IN_INDEX: The column sequence number in the index, starting with 1.
+* COLLATION: How the column is sorted in the index. This can have values A (ascending), D (descending), or NULL (not sorted).
+* CARDINALITY: An estimate of the number of unique values in the index. To update this number, run `ANALYZE TABLE` or (for MyISAM tables) `myisamchk -a`.
+* INDEX_TYPE: The index method used (BTREE, FULLTEXT, HASH, RTREE).
 
 ### Extended Explain
 The `EXPLAIN` statement produces extra (“extended”) information that is not part of `EXPLAIN` output but can be viewed by issuing a `SHOW WARNINGS` statement following `EXPLAIN`.
 
 ```sql
-mysql> explain extended select UnivId, UnivId in (select Graduate from Employee ) from University;
+explain extended select UnivId, UnivId in (select Graduate from Employee ) from University;
 ```
  id | select_type        | table      | type           | possible_keys | key      | key_len | ref  | rows | filtered | Extra       
 ----|--------------------|------------|----------------|---------------|----------|---------|------|------|----------|-------------
   1 | PRIMARY            | University | index          | NULL          | PRIMARY  | 4       | NULL |    3 |   100.00 | Using index 
   2 | DEPENDENT SUBQUERY | Employee   | index_subquery | Graduate      | Graduate | 5       | func |    2 |   100.00 | Using index 
+  
+* filtered: This column indicates the estimated percentage of table rows that are filtered by the table condition.
+* Extra
+  * Using index: The column information is retrieved from the table using only information in the index tree without having to do an additional seek to read the actual row. This strategy can be used when the query uses only columns that are part of a single index.
   
 You can get a good indication of how good a join is by taking the product of the values in the rows column of the EXPLAIN output. This should tell you roughly how many rows MySQL must examine to execute the query.
   
@@ -86,10 +113,11 @@ mysql> show warnings;
 | Note  | 1003 | select 'xingl'.'University'.'UnivId' AS 'UnivId',<in_optimizer>('xingl'.'University'.'UnivId',<exists>(<index_lookup>(<cache>('xingl'.'University'.'UnivId') in Employee on Graduate checking NULL having <is_not_null_test>('xingl'.'Employee'.'Graduate')))) AS 'UnivId in (select Graduate from Employee )' from 'xingl'.'University'
 
 
+
 ### EXPLAIN ANALYZE
 It produces `EXPLAIN` output along with timing and additional, iterator-based, information about how the optimizer's expectations matched the actual execution.
 
-Supported in MySQL 8.0.18, but ITAP's version is 5.5.62.
+Supported in MySQL 8.0.18.
 
 Example from MySQL documentation:
 ```sql
@@ -201,4 +229,4 @@ et_1|eq_ref|PRIMARY|PRIMARY|15|tt.AssignedPC|1
 tt|ref|AssignedPC,ClientID,ActualPC |NULL|NULL|NULL|3872|Using where
 
 ## References
-* MySQL documentation
+* MySQL documentation (https://dev.mysql.com/doc/refman/8.0/en/information-schema-statistics-table.html)
