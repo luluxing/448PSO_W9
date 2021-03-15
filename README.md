@@ -74,7 +74,7 @@ CREATE TABLE t2 (c1 INT, c2 INT);
 CREATE TABLE t3 (c1 INT, c2 INT);
 ```
 ```sql
-explain format=tree select count(*) from t1 join t2 on t1.c2 = t2.c2;
+mysql> explain format=tree select count(*) from t1 join t2 on t1.c2 = t2.c2;
 *************************** 1. row ***************************
            id: 1
   select_type: SIMPLE
@@ -162,7 +162,7 @@ CREATE TABLE t3 (
 );
 ```
 ```sql
-EXPLAIN ANALYZE SELECT * FROM t3 WHERE pk > 17\G
+mysql> EXPLAIN ANALYZE SELECT * FROM t3 WHERE pk > 17\G
 *************************** 1. row ***************************
 EXPLAIN: -> Filter: (t3.pk > 17)  (cost=1.26 rows=5)
 (actual time=0.013..0.016 rows=5 loops=1)
