@@ -6,6 +6,7 @@ We will use MySQL to show the query evaluation plan.
 
 You can create a MySQL account following this link: https://www.itap.purdue.edu/infrastructure/database/mysql/careeraccount.html . This requires to set a password and please do not use your Purdue career account password for MySQL account.
 
+## `EXPLAIN` statement
 Example tables:
 ```sql
 CREATE TABLE University(
@@ -38,8 +39,6 @@ INSERT INTO Employee VALUES (3, 'Lin', 2);
 INSERT INTO Employee VALUES (4, 'Rebecca', 3);
 ```
 
-## `EXPLAIN` statement
-
 We can use `Explain` before `SELECT`, `DELETE`, `INSERT`, `REPLACE`, and `UPDATE`.
 
 If we use:
@@ -67,6 +66,43 @@ show index from University from xingl;
  Table      | Non_unique | Key_name | Seq_in_index | Column_name | Collation | Cardinality | Sub_part | Packed | Null | Index_type | Comment | Index_comment 
 ----------|-----------|---------|-----------|------------|-------|------------|--------|-------|-----|-----------|-------|---------------
  University |          0 | PRIMARY  |            1 | UnivId      | A         |           3 |     NULL | NULL   |      | BTREE      |         |               
+
+If there are no indexes that can be applied to any join condition, or there are one or more indexes that can be used for single-table predicates, then a hash join is used.
+```sql
+CREATE TABLE t1 (c1 INT, c2 INT);
+CREATE TABLE t2 (c1 INT, c2 INT);
+CREATE TABLE t3 (c1 INT, c2 INT);
+```
+```sql
+explain format=tree select count(*) from t1 join t2 on t1.c2 = t2.c2;
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: t1
+   partitions: NULL
+         type: ALL
+possible_keys: NULL
+          key: NULL
+      key_len: NULL
+          ref: NULL
+         rows: 1
+     filtered: 100.00
+        Extra: NULL
+*************************** 2. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: t2
+   partitions: NULL
+         type: ALL
+possible_keys: NULL
+          key: NULL
+      key_len: NULL
+          ref: NULL
+         rows: 1
+     filtered: 100.00
+        Extra: Using where; Using join buffer (hash join)
+```
+Note: With MySQL version > 8.0.20, `format=tree` is no longer needed.
 
 ## The INFORMATION_SCHEMA STATISTICS Table
 `INFORMATION_SCHEMA` provides access to database metadata, information about the MySQL server such as the name of a database or table, the data type of a column, or access privileges. Other terms that are sometimes used for this information are data dictionary and system catalog.
@@ -126,7 +162,7 @@ CREATE TABLE t3 (
 );
 ```
 ```sql
-mysql> EXPLAIN ANALYZE SELECT * FROM t3 WHERE pk > 17\G
+EXPLAIN ANALYZE SELECT * FROM t3 WHERE pk > 17\G
 *************************** 1. row ***************************
 EXPLAIN: -> Filter: (t3.pk > 17)  (cost=1.26 rows=5)
 (actual time=0.013..0.016 rows=5 loops=1)
